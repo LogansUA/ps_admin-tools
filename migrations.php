@@ -11,6 +11,7 @@ if (!defined('_PS_VERSION_')) {
  */
 class Migrations extends Module
 {
+
     /**
      * @var boolean $_errors error
      */
@@ -21,8 +22,7 @@ class Migrations extends Module
      */
     public function __construct()
     {
-        $this->name      = 'Migrations';
-        $this->tab       = 'migrations';
+        $this->name      = 'migrations';
         $this->version   = '1.0';
         $this->author    = 'Oleg Kachinsky';
         $this->bootstrap = true;
@@ -37,7 +37,7 @@ class Migrations extends Module
     /**
      * Install
      *
-     * @return bool
+     * @return boolean
      */
     public function install()
     {
@@ -51,7 +51,7 @@ class Migrations extends Module
     /**
      * Un install
      *
-     * @return bool
+     * @return boolean
      */
     public function uninstall()
     {
@@ -60,5 +60,72 @@ class Migrations extends Module
         }
 
         return true;
+    }
+
+    /**
+     * Get content
+     *
+     * @return mixed
+     */
+    public function getContent()
+    {
+        return $this->renderForm();
+    }
+
+    /**
+     * Render custom form
+     *
+     * @return string
+     */
+    private function renderForm()
+    {
+        $fieldsForm = array(
+            'form' => array(
+                'buttons' => array(
+                    'generate' => array(
+                        'title' => $this->l('Generate migration'),
+                        'type'  => 'submit',
+                        'name'  => 'generate',
+                        'class' => 'btn btn-default pull-right',
+                        'icon'  => 'process-icon-save'
+                    ),
+                    'migrate'  => array(
+                        'title' => $this->l('Migrate'),
+                        'type'  => 'submit',
+                        'name'  => 'migrate',
+                        'class' => 'btn btn-default pull-right',
+                        'icon'  => 'process-icon-refresh'
+                    )
+                ),
+            ),
+        );
+
+        $lang   = new Language((int) Configuration::get('PS_LANG_DEFAULT'));
+        $helper = new HelperForm();
+
+        $helper->show_toolbar = false;
+        $helper->table        = $this->table;
+
+        $helper->default_form_language    = $lang->id;
+        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG')
+            ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG')
+            : 0;
+
+        $helper->identifier    = $this->identifier;
+        $helper->submit_action = 'submitModule';
+
+        $helper->currentIndex = $this
+            ->context
+            ->link
+            ->getAdminLink('AdminModules', false) .
+                '&configure=' . $this->name .
+                '&tab_module=' . $this->tab .
+                '&module_name=' . $this->name;
+
+        $helper->token = Tools::getAdminTokenLite('AdminModules');
+
+        return $helper->generateForm(array(
+            $fieldsForm
+        ));
     }
 }
