@@ -37,7 +37,7 @@ class Migrations extends Module
     /**
      * Install
      *
-     * @return boolean
+     * @return bool
      */
     public function install()
     {
@@ -51,7 +51,7 @@ class Migrations extends Module
     /**
      * Un install
      *
-     * @return boolean
+     * @return bool
      */
     public function uninstall()
     {
@@ -65,7 +65,7 @@ class Migrations extends Module
     /**
      * Get content
      *
-     * @return mixed
+     * @return string
      */
     public function getContent()
     {
@@ -189,6 +189,8 @@ class Migrations extends Module
 
     /**
      * Execute migrations
+     *
+     * @return bool
      */
     private function executeMigrations()
     {
@@ -210,10 +212,38 @@ class Migrations extends Module
                     Db::getInstance()->execute($data);
                 } catch (PrestaShopDatabaseException $e) {
                     $this->context->controller->errors[] = $e->getMessage();
+
+                    return false;
+                }
+
+                $selectQuery
+                    = "SELECT
+                            mv.version
+                        FROM
+                            `migration_versions` AS mv
+                        WHERE
+                            mv.version = '" . $fileInfo['filename'] . "'
+                    ";
+
+                $queryResult = Db::getInstance()->executeS($selectQuery);
+
+                if (!$queryResult) {
+                    $insertQuery
+                        = "INSERT INTO
+                                `migration_versions`
+                            VALUES
+                                (
+                                    '" . $fileInfo['filename'] . "'
+                                )
+                        ";
+
+                    Db::getInstance()->execute($insertQuery);
                 }
 
                 fclose($stream);
             }
         }
+
+        return true;
     }
 }
