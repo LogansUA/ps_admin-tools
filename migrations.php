@@ -41,7 +41,7 @@ class Migrations extends Module
      */
     public function install()
     {
-        if (!parent::install()) {
+        if (!parent::install() || !$this->databaseUpdate('install')) {
             return false;
         }
 
@@ -55,7 +55,7 @@ class Migrations extends Module
      */
     public function uninstall()
     {
-        if (!parent::uninstall()) {
+        if (!parent::uninstall() || !$this->databaseUpdate('uninstall')) {
             return false;
         }
 
@@ -135,6 +135,42 @@ class Migrations extends Module
         return $helper->generateForm(array(
             $fieldsForm
         ));
+    }
+
+    /**
+     * Update database
+     *
+     * @param string $action
+     *
+     * @return bool
+     */
+    private function databaseUpdate($action = null)
+    {
+        $sql = '';
+
+        switch ($action) {
+            case 'install':
+                $sql
+                    = 'CREATE TABLE IF NOT EXISTS `migration_versions`
+                            (
+                                `version` VARCHAR(255) NOT NULL
+                            )
+                        ENGINE=InnoDB DEFAULT CHARSET=utf8;
+                    ';
+                break;
+            case 'uninstall':
+                $sql = 'DROP TABLE IF EXISTS prestashop.migration_versions;';
+                break;
+            default:
+                $this->context->controller->errors[] = 'Wrong action migrations.php';
+                break;
+        }
+
+        if (!Db::getInstance()->execute($sql)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
