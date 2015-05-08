@@ -73,6 +73,10 @@ class Migrations extends Module
             $this->generateMigration();
         }
 
+        if (Tools::isSubmit('migrate')) {
+            $this->executeMigrations();
+        }
+
         return $this->renderForm();
     }
 
@@ -145,5 +149,35 @@ class Migrations extends Module
         $stream   = fopen($filename, 'w');
 
         fclose($stream);
+    }
+
+    /**
+     * Execute migrations
+     */
+    private function executeMigrations()
+    {
+        $prefix = dirname(__FILE__) . '/versions/';
+
+        $files = scandir($prefix, 1);
+
+        foreach ($files as $file) {
+            $filename = $prefix . $file;
+
+            $fileInfo = pathinfo($filename);
+
+            if ($fileInfo['extension'] == 'sql') {
+                $stream = fopen($filename, 'r');
+
+                $data = file_get_contents($filename);
+
+                try {
+                    Db::getInstance()->execute($data);
+                } catch (PrestaShopDatabaseException $e) {
+                    $this->context->controller->errors[] = $e->getMessage();
+                }
+
+                fclose($stream);
+            }
+        }
     }
 }
