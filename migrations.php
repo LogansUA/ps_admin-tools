@@ -69,6 +69,10 @@ class Migrations extends Module
      */
     public function getContent()
     {
+        if (Tools::isSubmit('generate')) {
+            $this->generateMigration();
+        }
+
         return $this->renderForm();
     }
 
@@ -127,5 +131,19 @@ class Migrations extends Module
         return $helper->generateForm(array(
             $fieldsForm
         ));
+    }
+
+    /**
+     * Generate migration file
+     */
+    private function generateMigration()
+    {
+        $dateTime  = new DateTime();
+        $timestamp = $dateTime->format('dmYHis');
+
+        $filename = dirname(__FILE__) . '/versions/' . $timestamp . '.sql';
+        $stream   = fopen($filename, 'w');
+
+        fclose($stream);
     }
 }
