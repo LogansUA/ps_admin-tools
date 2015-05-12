@@ -218,8 +218,6 @@ class Migrations extends Module
 
         $files = scandir($prefix, 1);
 
-        // TODO: Select and combine unused versions
-//        $unusedVersions = $this->findUnusedVersions($prefix, $files);
         foreach ($files as $file) {
             $filename = $prefix . $file;
 
@@ -232,7 +230,7 @@ class Migrations extends Module
                         FROM
                             `migration_versions` AS mv
                         WHERE
-                            mv.version = '" . $fileInfo['filename'] . "'
+                            mv.version = '" . pSQL($fileInfo['filename']) . "'
                     ";
 
                 $queryResult = Db::getInstance()->executeS($selectQuery);
@@ -246,7 +244,7 @@ class Migrations extends Module
                                 `migration_versions`
                             VALUES
                                 (
-                                    '" . $fileInfo['filename'] . "'
+                                    '" . pSQL($fileInfo['filename']) . "'
                                 )
                         ";
 
@@ -269,44 +267,5 @@ class Migrations extends Module
         }
 
         return true;
-    }
-
-    /**
-     * Find unused versions
-     *
-     * @param $prefix
-     * @param $files
-     *
-     * @return array
-     *
-     * @throws PrestaShopDatabaseException
-     */
-    private function findUnusedVersions($prefix, $files)
-    {
-        $sql = "SELECT version FROM `migration_versions`";
-
-        $result = Db::getInstance()->executeS($sql);
-        $unusedVersions = array();
-
-        foreach ($files as $file) {
-            $filename = $prefix . $file;
-
-            $fileInfo = pathinfo($filename);
-            $isEqual = false;
-
-            if ($fileInfo['extension'] == 'sql') {
-                foreach ($result as $version) {
-                    if ($fileInfo['filename'] == $version['version']) {
-                        $isEqual = true;
-
-                        break;
-                    }
-                }
-
-                if (!$isEqual) {
-                    array_push($unusedVersions, $fileInfo['filename']);
-                }
-            }
-        }
     }
 }

@@ -27,19 +27,7 @@ class CrudController extends AdminController
     {
         $arguments = Tools::getValue('cli_argv', false);
 
-        if (is_array($arguments)) {
-            if (isset($arguments[1])) {
-                $this->command = $arguments[1];
-
-                if (isset($arguments[2])) {
-                    $this->firstAttribute = $arguments[2];
-
-                    if (isset($arguments[3])) {
-                        $this->secondAttribute = $arguments[3];
-                    }
-                }
-            }
-        }
+        $this->setVariables($arguments);
 
         switch ($this->command) {
             case 'cache':
@@ -103,13 +91,35 @@ class CrudController extends AdminController
     }
 
     /**
+     * Set variables
+     *
+     * @param array $arguments Arguments from cli
+     */
+    private function setVariables($arguments)
+    {
+        if (is_array($arguments)) {
+            if (isset($arguments[1])) {
+                $this->command = $arguments[1];
+
+                if (isset($arguments[2])) {
+                    $this->firstAttribute = $arguments[2];
+
+                    if (isset($arguments[3])) {
+                        $this->secondAttribute = $arguments[3];
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Delete cache
      *
      * @param string $path
      *
      * @return bool
      */
-    public function deleteCache($path)
+    private function deleteCache($path)
     {
         foreach (glob("{$path}/*") as $file) {
             if (is_dir($file)) {
@@ -127,9 +137,9 @@ class CrudController extends AdminController
      *
      * @param string $name
      */
-    public function createNewHook($name)
+    private function createNewHook($name)
     {
-        $sql = "SELECT `title` FROM ps_hook WHERE name = '" . $name . "'";
+        $sql = "SELECT `title` FROM " . _DB_PREFIX_ . "hook WHERE name = '" . pSQL($name) . "'";
 
         $result = Db::getInstance()->executeS($sql);
 
@@ -151,18 +161,18 @@ class CrudController extends AdminController
      *
      * @param string $newDomain
      */
-    public function changeDomain($newDomain)
+    private function changeDomain($newDomain)
     {
-        $sql = "UPDATE `ps_shop` SET name = '" . $newDomain . "' WHERE id_shop = '1'";
+        $sql = "UPDATE `" . _DB_PREFIX_ . "shop` SET name = '" . pSQL($newDomain) . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `ps_shop_url` SET domain = '" . $newDomain . "' WHERE id_shop = '1'";
+        $sql = "UPDATE `" . _DB_PREFIX_ . "shop_url` SET domain = '" . pSQL($newDomain) . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `ps_shop_url` SET domain_ssl = '" . $newDomain . "' WHERE id_shop = '1'";
+        $sql = "UPDATE `" . _DB_PREFIX_ . "shop_url` SET domain_ssl = '" . pSQL($newDomain) . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `ps_configuration` SET value = '" . $newDomain . "' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
+        $sql = "UPDATE `" . _DB_PREFIX_ . "configuration` SET value = '" . pSQL($newDomain) . "' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
         Db::getInstance()->execute($sql);
     }
 
@@ -174,15 +184,15 @@ class CrudController extends AdminController
      *
      * @return int
      */
-    public function linkHook($module, $hookName)
+    private function linkHook($module, $hookName)
     {
-        $sql = "SELECT `id_module` FROM ps_module WHERE name = '" . $module . "'";
+        $sql = "SELECT `id_module` FROM " . _DB_PREFIX_ . "module WHERE name = '" . pSQL($module) . "'";
         $mod = Db::getInstance()->executeS($sql);
         if ($mod[0]['id_module'] == "") {
             return 1;
         }
 
-        $sql  = "SELECT `id_hook` FROM ps_hook WHERE name = '" . $hookName . "'";
+        $sql  = "SELECT `id_hook` FROM " . _DB_PREFIX_ . "hook WHERE name = '" . pSQL($hookName) . "'";
         $hook = Db::getInstance()->executeS($sql);
         if ($hook[0]['id_hook'] == "") {
             return 2;
@@ -191,14 +201,14 @@ class CrudController extends AdminController
         $myMode = $mod[0]['id_module'];
         $myHook = $hook[0]['id_hook'];
 
-        $sql        = "SELECT * FROM ps_hook_module WHERE `id_module` = '" . $myMode . "' AND  `id_hook` = '" . $myHook . "'";
+        $sql        = "SELECT * FROM " . _DB_PREFIX_ . "hook_module WHERE `id_module` = '" . pSQL($myMode) . "' AND  `id_hook` = '" . $myHook . "'";
         $validation = Db::getInstance()->executeS($sql);
 
         if ($validation[0]['id_module'] != "" && $validation[0]['id_hook'] != "") {
             return 3;
         }
 
-        $sql = "INSERT INTO ps_hook_module VALUES ('" . $myMode . "', 1, '" . $myHook  . "', 1)";
+        $sql = "INSERT INTO " . _DB_PREFIX_ . "hook_module VALUES ('" . pSQL($myMode) . "', 1, '" . pSQL($myHook)  . "', 1)";
         Db::getInstance()->execute($sql);
 
         return 4;
