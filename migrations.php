@@ -45,6 +45,7 @@ class Migrations extends Module
             || !$this->registerHook('generateMigrations')
             || !$this->registerHook('executeMigrations')
             || !$this->databaseUpdate('install')
+            || !symlink(__DIR__ . '/console.php', _PS_ROOT_DIR_ . '/console')
         ) {
             return false;
         }
@@ -175,7 +176,7 @@ class Migrations extends Module
                             (
                                 `version` VARCHAR(255) NOT NULL
                             )
-                        ENGINE=InnoDB DEFAULT CHARSET=utf8;
+                        ENGINE = InnoDB DEFAULT CHARSET = utf8;
                     ';
                 break;
             case 'uninstall':
@@ -218,6 +219,8 @@ class Migrations extends Module
 
         $files = scandir($prefix, 1);
 
+        // TODO: Select and combine unused versions
+//        $unusedVersions = $this->findUnusedVersions($prefix, $files);
         foreach ($files as $file) {
             $filename = $prefix . $file;
 
@@ -226,9 +229,9 @@ class Migrations extends Module
             if ($fileInfo['extension'] == 'sql') {
                 $selectQuery
                     = "SELECT
-                            version
+                            *
                         FROM
-                            `migration_versions`
+                            `migration_versions` AS mv
                         WHERE
                             mv.version = '" . $fileInfo['filename'] . "'
                     ";
@@ -236,7 +239,7 @@ class Migrations extends Module
                 $queryResult = Db::getInstance()->executeS($selectQuery);
 
                 if ($queryResult) {
-                    return false;
+                    continue;
                 }
 
                 $insertQuery
@@ -267,5 +270,44 @@ class Migrations extends Module
         }
 
         return true;
+    }
+
+    /**
+     * Find unused versions
+     *
+     * @param $prefix
+     * @param $files
+     *
+     * @return array
+     *
+     * @throws PrestaShopDatabaseException
+     */
+    private function findUnusedVersions($prefix, $files)
+    {
+        $sql = "SELECT version FROM `migration_versions`";
+
+        $result = Db::getInstance()->executeS($sql);
+        $unusedVersions = array();
+
+        foreach ($files as $file) {
+            $filename = $prefix . $file;
+
+            $fileInfo = pathinfo($filename);
+            $isEqual = false;
+
+            if ($fileInfo['extension'] == 'sql') {
+                foreach ($result as $version) {
+                    if ($fileInfo['filename'] == $version['version']) {
+                        $isEqual = true;
+
+                        break;
+                    }
+                }
+
+                if (!$isEqual) {
+                    array_push($unusedVersions, $fileInfo['filename']);
+                }
+            }
+        }
     }
 }
