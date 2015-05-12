@@ -6,7 +6,6 @@
 	<description><![CDATA[]]></description>
 	<author><![CDATA[Oleg Kachinsky]]></author>
 	<tab><![CDATA[]]></tab>
-	<confirmUninstall><![CDATA[Are you sure you want to uninstall?]]></confirmUninstall>
 	<is_configurable>1</is_configurable>
 	<need_instance>1</need_instance>
 	<limited_countries></limited_countries>

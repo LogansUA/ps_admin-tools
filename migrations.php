@@ -30,8 +30,6 @@ class Migrations extends Module
         parent::__construct();
 
         $this->displayName = $this->l('Migrations');
-
-        $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
     }
 
     /**
@@ -45,6 +43,7 @@ class Migrations extends Module
             || !$this->registerHook('generateMigrations')
             || !$this->registerHook('executeMigrations')
             || !$this->databaseUpdate('install')
+            || !copy(__DIR__ . '/controllers/admin/CrudController.php', _PS_OVERRIDE_DIR_ . '/controllers/admin/CrudController.php')
             || !symlink(__DIR__ . '/console.php', _PS_ROOT_DIR_ . '/console')
         ) {
             return false;
