@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <module>
-	<name>migrations</name>
-	<displayName><![CDATA[Migrations]]></displayName>
+	<name>admintools</name>
+	<displayName><![CDATA[Admin tools]]></displayName>
 	<version><![CDATA[1.0]]></version>
-	<description><![CDATA[]]></description>
+	<description><![CDATA[Module for PrestaShop CMS which provides tools such as CLI and Migrations]]></description>
 	<author><![CDATA[Oleg Kachinsky]]></author>
 	<tab><![CDATA[]]></tab>
 	<is_configurable>1</is_configurable>

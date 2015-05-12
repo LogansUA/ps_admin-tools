@@ -92,7 +92,7 @@ class CrudController extends AdminController
         echo "cache                                 - remove cache\n";
         echo "domain [domainname]                   - change site domain\n";
         echo "addhook [hookname]                    - add hook to site\n";
-        echo "linkhook [modulename] [hookname]      - add hook to site\n";
+        echo "linkhook [modulename] [hookname]      - link hook with module\n";
         echo "migration [action]                    - generate/migrate migrations\n";
     }
 

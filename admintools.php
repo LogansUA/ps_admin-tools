@@ -5,11 +5,11 @@ if (!defined('_PS_VERSION_')) {
 }
 
 /**
- * Migrations
+ * Admin tools
  *
  * @author Oleg Kachinsky <logansoleg@gmail.com>
  */
-class Migrations extends Module
+class AdminTools extends Module
 {
 
     /**
@@ -22,14 +22,15 @@ class Migrations extends Module
      */
     public function __construct()
     {
-        $this->name      = 'migrations';
+        $this->name      = 'admintools';
         $this->version   = '1.0';
         $this->author    = 'Oleg Kachinsky';
         $this->bootstrap = true;
 
         parent::__construct();
 
-        $this->displayName = $this->l('Migrations');
+        $this->displayName = $this->l('Admin tools');
+        $this->description = $this->l('Module for PrestaShop CMS which provides tools such as CLI and Migrations');
     }
 
     /**
