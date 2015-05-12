@@ -150,7 +150,7 @@ class CrudController extends AdminController
         $result = Db::getInstance()->executeS($sql);
 
         if ($result[0]['title'] == $name) {
-            echo "This hook already axist.\n";
+            echo "This hook already exist.\n";
 
             return;
         } else {
@@ -159,6 +159,8 @@ class CrudController extends AdminController
                 'title'       => $name,
                 'description' => 'This is a custom hook!',
             ));
+
+            echo $name . ' successfully added.';
         }
     }
 
@@ -181,6 +183,8 @@ class CrudController extends AdminController
         $sql = "UPDATE `" . _DB_PREFIX_ . "configuration` SET value = '" . pSQL($newDomain)
                . "' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
         Db::getInstance()->execute($sql);
+
+        echo 'Domain successfully changed to ' . $newDomain;
     }
 
     /**
