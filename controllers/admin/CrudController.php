@@ -75,7 +75,21 @@ class CrudController extends AdminController
                         echo "You link was attached to this hook.\n";
                         break;
                 }
+                break;
+            case 'migration':
 
+                switch ($this->firstAttribute) {
+                    case 'generate':
+                        Hook::exec('generateMigrations');
+
+                        echo "New migration generated.\n";
+                        break;
+                    case 'migrate':
+                        Hook::exec('executeMigrations');
+
+                        echo "All migrations are executed.\n";
+                        break;
+                }
                 break;
             default:
                 echo "---------------------- Commands ------------------------\n";
@@ -83,6 +97,7 @@ class CrudController extends AdminController
                 echo "domain [domainname]                   - change site domain\n";
                 echo "addhook [hookname]                    - add hook to site\n";
                 echo "linkhook [modulename] [hookname]      - add hook to site\n";
+                echo "migration [action]                    - generate/migrate migrations\n";
                 break;
         }
     }
@@ -110,11 +125,11 @@ class CrudController extends AdminController
     /**
      * Create new hook
      *
-     * @param $name string
+     * @param string $name
      */
     public function createNewHook($name)
     {
-        $sql = "SELECT `title` FROM ps_hook WHERE `name` = '$name'";
+        $sql = "SELECT `title` FROM ps_hook WHERE name = '" . $name . "'";
 
         $result = Db::getInstance()->executeS($sql);
 
@@ -123,51 +138,51 @@ class CrudController extends AdminController
 
             return;
         } else {
-            Db::getInstance()->insert('hook', [
+            Db::getInstance()->insert('hook', array(
                 'name'        => $name,
                 'title'       => $name,
                 'description' => 'This is a custom hook!',
-            ]);
+            ));
         }
     }
 
     /**
      * Change domain
      *
-     * @param $newDomain
+     * @param string $newDomain
      */
     public function changeDomain($newDomain)
     {
-        $sql = "UPDATE `ps_shop` SET name = '$newDomain' WHERE id_shop = '1'";
+        $sql = "UPDATE `ps_shop` SET name = '" . $newDomain . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `ps_shop_url` SET domain = '$newDomain' WHERE id_shop = '1'";
+        $sql = "UPDATE `ps_shop_url` SET domain = '" . $newDomain . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `ps_shop_url` SET domain_ssl = '$newDomain' WHERE id_shop = '1'";
+        $sql = "UPDATE `ps_shop_url` SET domain_ssl = '" . $newDomain . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `ps_configuration` SET value = '$newDomain' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
+        $sql = "UPDATE `ps_configuration` SET value = '" . $newDomain . "' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
         Db::getInstance()->execute($sql);
     }
 
     /**
      * Link hook with module
      *
-     * @param $module
-     * @param $hookName
+     * @param string $module
+     * @param string $hookName
      *
      * @return int
      */
     public function linkHook($module, $hookName)
     {
-        $sql = "SELECT `id_module` FROM ps_module WHERE `name` = '$module'";
+        $sql = "SELECT `id_module` FROM ps_module WHERE name = '" . $module . "'";
         $mod = Db::getInstance()->executeS($sql);
         if ($mod[0]['id_module'] == "") {
             return 1;
         }
 
-        $sql  = "SELECT `id_hook` FROM ps_hook WHERE `name` = '$hookName'";
+        $sql  = "SELECT `id_hook` FROM ps_hook WHERE name = '" . $hookName . "'";
         $hook = Db::getInstance()->executeS($sql);
         if ($hook[0]['id_hook'] == "") {
             return 2;
@@ -176,14 +191,14 @@ class CrudController extends AdminController
         $myMode = $mod[0]['id_module'];
         $myHook = $hook[0]['id_hook'];
 
-        $sql        = "SELECT * FROM `ps_hook_module` WHERE `id_module` = '$myMode' AND  `id_hook` = '$myHook'";
+        $sql        = "SELECT * FROM ps_hook_module WHERE `id_module` = '" . $myMode . "' AND  `id_hook` = '" . $myHook . "'";
         $validation = Db::getInstance()->executeS($sql);
 
         if ($validation[0]['id_module'] != "" && $validation[0]['id_hook'] != "") {
             return 3;
         }
 
-        $sql = "INSERT INTO `ps_hook_module` VALUES ('$myMode', 1, '$myHook', 1)";
+        $sql = "INSERT INTO ps_hook_module VALUES ('" . $myMode . "', 1, '" . $myHook  . "', 1)";
         Db::getInstance()->execute($sql);
 
         return 4;
