@@ -41,7 +41,11 @@ class Migrations extends Module
      */
     public function install()
     {
-        if (!parent::install() || !$this->databaseUpdate('install')) {
+        if (!parent::install()
+            || !$this->registerHook('generateMigrations')
+            || !$this->registerHook('executeMigrations')
+            || !$this->databaseUpdate('install')
+        ) {
             return false;
         }
 
@@ -63,6 +67,22 @@ class Migrations extends Module
     }
 
     /**
+     * Hook display generate migrations
+     */
+    public function hookGenerateMigrations()
+    {
+        $this->generateMigration();
+    }
+
+    /**
+     * Hook display execute migrations
+     */
+    public function hookExecuteMigrations()
+    {
+        $this->executeMigrations();
+    }
+
+    /**
      * Get content
      *
      * @return string
@@ -70,11 +90,11 @@ class Migrations extends Module
     public function getContent()
     {
         if (Tools::isSubmit('generate')) {
-            $this->generateMigration();
+            Hook::exec('generateMigrations');
         }
 
         if (Tools::isSubmit('migrate')) {
-            $this->executeMigrations();
+            Hook::exec('executeMigrations');
         }
 
         return $this->renderForm();
