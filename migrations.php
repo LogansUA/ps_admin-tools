@@ -224,13 +224,15 @@ class Migrations extends Module
             $fileInfo = pathinfo($filename);
 
             if ($fileInfo['extension'] == 'sql') {
+                $infoFileName = $fileInfo['filename'];
+
                 $selectQuery
                     = "SELECT
                             *
                         FROM
                             `migration_versions` AS mv
                         WHERE
-                            mv.version = '" . pSQL($fileInfo['filename']) . "'
+                            mv.version = '" . pSQL($infoFileName) . "'
                     ";
 
                 $queryResult = Db::getInstance()->executeS($selectQuery);

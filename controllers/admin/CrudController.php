@@ -5,6 +5,7 @@
  */
 class CrudController extends AdminController
 {
+
     /**
      * @var string $сommand
      */
@@ -26,7 +27,6 @@ class CrudController extends AdminController
     public function __construct()
     {
         $arguments = Tools::getValue('cli_argv', false);
-
         $this->setVariables($arguments);
 
         switch ($this->command) {
@@ -48,7 +48,6 @@ class CrudController extends AdminController
                 break;
             case 'linkhook':
                 $endResult = $this->linkHook($this->firstAttribute, $this->secondAttribute);
-
                 switch ($endResult) {
                     case 1:
                         echo "No such module in data base.\n";
@@ -65,7 +64,6 @@ class CrudController extends AdminController
                 }
                 break;
             case 'migration':
-
                 switch ($this->firstAttribute) {
                     case 'generate':
                         Hook::exec('generateMigrations');
@@ -80,14 +78,22 @@ class CrudController extends AdminController
                 }
                 break;
             default:
-                echo "---------------------- Commands ------------------------\n";
-                echo "cache                                 - remove cache\n";
-                echo "domain [domainname]                   - change site domain\n";
-                echo "addhook [hookname]                    - add hook to site\n";
-                echo "linkhook [modulename] [hookname]      - add hook to site\n";
-                echo "migration [action]                    - generate/migrate migrations\n";
+                $this->showInfo();
                 break;
         }
+    }
+
+    /**
+     * Show information
+     */
+    private function showInfo()
+    {
+        echo "---------------------- Commands ------------------------\n";
+        echo "cache                                 - remove cache\n";
+        echo "domain [domainname]                   - change site domain\n";
+        echo "addhook [hookname]                    - add hook to site\n";
+        echo "linkhook [modulename] [hookname]      - add hook to site\n";
+        echo "migration [action]                    - generate/migrate migrations\n";
     }
 
     /**
@@ -172,7 +178,8 @@ class CrudController extends AdminController
         $sql = "UPDATE `" . _DB_PREFIX_ . "shop_url` SET domain_ssl = '" . pSQL($newDomain) . "' WHERE id_shop = '1'";
         Db::getInstance()->execute($sql);
 
-        $sql = "UPDATE `" . _DB_PREFIX_ . "configuration` SET value = '" . pSQL($newDomain) . "' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
+        $sql = "UPDATE `" . _DB_PREFIX_ . "configuration` SET value = '" . pSQL($newDomain)
+               . "' WHERE name IN ('PS_SHOP_DOMAIN', 'PS_SHOP_DOMAIN_SSL', 'PS_SHOP_NAME')";
         Db::getInstance()->execute($sql);
     }
 
@@ -188,13 +195,13 @@ class CrudController extends AdminController
     {
         $sql = "SELECT `id_module` FROM " . _DB_PREFIX_ . "module WHERE name = '" . pSQL($module) . "'";
         $mod = Db::getInstance()->executeS($sql);
-        if ($mod[0]['id_module'] == "") {
+        if ($mod[0]['id_module']) {
             return 1;
         }
 
         $sql  = "SELECT `id_hook` FROM " . _DB_PREFIX_ . "hook WHERE name = '" . pSQL($hookName) . "'";
         $hook = Db::getInstance()->executeS($sql);
-        if ($hook[0]['id_hook'] == "") {
+        if ($hook[0]['id_hook']) {
             return 2;
         }
 
@@ -203,12 +210,11 @@ class CrudController extends AdminController
 
         $sql        = "SELECT * FROM " . _DB_PREFIX_ . "hook_module WHERE `id_module` = '" . pSQL($myMode) . "' AND  `id_hook` = '" . $myHook . "'";
         $validation = Db::getInstance()->executeS($sql);
-
-        if ($validation[0]['id_module'] != "" && $validation[0]['id_hook'] != "") {
+        if (!$validation[0]['id_module'] && !$validation[0]['id_hook']) {
             return 3;
         }
 
-        $sql = "INSERT INTO " . _DB_PREFIX_ . "hook_module VALUES ('" . pSQL($myMode) . "', 1, '" . pSQL($myHook)  . "', 1)";
+        $sql = "INSERT INTO " . _DB_PREFIX_ . "hook_module VALUES ('" . pSQL($myMode) . "', 1, '" . pSQL($myHook) . "', 1)";
         Db::getInstance()->execute($sql);
 
         return 4;
