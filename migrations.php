@@ -204,6 +204,32 @@ class Migrations extends Module
             $fileInfo = pathinfo($filename);
 
             if ($fileInfo['extension'] == 'sql') {
+                $selectQuery
+                    = "SELECT
+                            version
+                        FROM
+                            `migration_versions`
+                        WHERE
+                            mv.version = '" . $fileInfo['filename'] . "'
+                    ";
+
+                $queryResult = Db::getInstance()->executeS($selectQuery);
+
+                if ($queryResult) {
+                    return false;
+                }
+
+                $insertQuery
+                    = "INSERT INTO
+                                `migration_versions`
+                            VALUES
+                                (
+                                    '" . $fileInfo['filename'] . "'
+                                )
+                        ";
+
+                Db::getInstance()->execute($insertQuery);
+
                 $stream = fopen($filename, 'r');
 
                 $data = file_get_contents($filename);
@@ -214,30 +240,6 @@ class Migrations extends Module
                     $this->context->controller->errors[] = $e->getMessage();
 
                     return false;
-                }
-
-                $selectQuery
-                    = "SELECT
-                            mv.version
-                        FROM
-                            `migration_versions` AS mv
-                        WHERE
-                            mv.version = '" . $fileInfo['filename'] . "'
-                    ";
-
-                $queryResult = Db::getInstance()->executeS($selectQuery);
-
-                if (!$queryResult) {
-                    $insertQuery
-                        = "INSERT INTO
-                                `migration_versions`
-                            VALUES
-                                (
-                                    '" . $fileInfo['filename'] . "'
-                                )
-                        ";
-
-                    Db::getInstance()->execute($insertQuery);
                 }
 
                 fclose($stream);
