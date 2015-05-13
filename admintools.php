@@ -68,7 +68,7 @@ class AdminTools extends Module
     }
 
     /**
-     * Hook display generate migrations
+     * Hook generate migrations
      */
     public function hookGenerateMigrations()
     {
@@ -76,7 +76,7 @@ class AdminTools extends Module
     }
 
     /**
-     * Hook display execute migrations
+     * Hook execute migrations
      */
     public function hookExecuteMigrations()
     {
@@ -183,7 +183,7 @@ class AdminTools extends Module
                 $sql = 'DROP TABLE IF EXISTS prestashop.migration_versions;';
                 break;
             default:
-                $this->context->controller->errors[] = 'Wrong action migrations.php';
+                $this->context->controller->errors[] = 'Wrong action in admintools.php: ' . $action;
                 break;
         }
 
@@ -219,56 +219,75 @@ class AdminTools extends Module
 
         $files = scandir($prefix, 1);
 
-        foreach ($files as $file) {
-            $filename = $prefix . $file;
+        $unusedVersions = $this->findUnusedVersions($prefix, $files);
 
-            $fileInfo = pathinfo($filename);
+        foreach ($unusedVersions as $version) {
+            $filename = $prefix . $version['basename'];
 
-            if ($fileInfo['extension'] == 'sql') {
-                $infoFileName = $fileInfo['filename'];
+            $stream = fopen($filename, 'r');
+            $data = file_get_contents($filename);
 
-                $selectQuery
-                    = "SELECT
-                            *
-                        FROM
-                            `migration_versions` AS mv
-                        WHERE
-                            mv.version = '" . pSQL($infoFileName) . "'
+            try {
+                Db::getInstance()->execute($data);
+            } catch (PrestaShopDatabaseException $e) {
+                $this->context->controller->errors[] = $e->getMessage();
+
+                return false;
+            }
+
+            fclose($stream);
+
+            $fileVersion = $version['filename'];
+
+            $insertQuery
+                = "INSERT INTO
+                        `migration_versions`
+                    VALUES
+                        ('" . pSQL($fileVersion) . "')
                     ";
 
-                $queryResult = Db::getInstance()->executeS($selectQuery);
-
-                if ($queryResult) {
-                    continue;
-                }
-
-                $insertQuery
-                    = "INSERT INTO
-                                `migration_versions`
-                            VALUES
-                                (
-                                    '" . pSQL($fileInfo['filename']) . "'
-                                )
-                        ";
-
-                Db::getInstance()->execute($insertQuery);
-
-                $stream = fopen($filename, 'r');
-
-                $data = file_get_contents($filename);
-
-                try {
-                    Db::getInstance()->execute($data);
-                } catch (PrestaShopDatabaseException $e) {
-                    $this->context->controller->errors[] = $e->getMessage();
-
-                    return false;
-                }
-
-                fclose($stream);
-            }
+            Db::getInstance()->execute($insertQuery);
         }
 
         return true;
+    }
+
+    /**
+     * Find unused versions
+     *
+     * @param $prefix
+     * @param $files
+     *
+     * @return array
+     *
+     * @throws PrestaShopDatabaseException
+     */
+    private function findUnusedVersions($prefix, $files)
+    {
+        $sql    = "SELECT version FROM `migration_versions`";
+        $result = Db::getInstance()->executeS($sql);
+
+        $unusedVersions = array();
+        foreach ($files as $file) {
+            $filename = $prefix . $file;
+            $fileInfo = pathinfo($filename);
+
+            if ($fileInfo['extension'] == 'sql') {
+                $isEqual = false;
+
+                foreach ($result as $version) {
+                    if ($fileInfo['filename'] == $version['version']) {
+                        $isEqual = true;
+                        break;
+                    }
+                }
+
+                if (!$isEqual) {
+                    array_push($unusedVersions, $fileInfo);
+                }
+            }
+        }
+
+        return $unusedVersions;
     }
 }
