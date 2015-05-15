@@ -31,5 +31,16 @@ mv ps_admin-tools/ YourShop/modules/admintools
 * To generate migration go to module settings from your back-office and press "Generate migration"
 * To execute migration go to module settings from your back-office and press "Migrate"
 
+## Rollbar
+Plugin provides errors and exceptions detecting in your application and reports them to Rollbar for alerts, reporting, and analysis.
+
+To use that you should:
+* Register project on [Rollbar](https://rollbar.com/)
+* Get access token for your project
+* Go to module settings from your back-office
+* Enable Rollbar service
+* Fill access token field
+* Press submit to connect log reports with Rollbar
+
 ## License
 Code released under [the MIT license](https://github.com/LogansUA/ps_admin-tools/blob/master/LICENSE).
