@@ -18,19 +18,6 @@ mv ps_admin-tools/ YourShop/modules/admintools
 > [How to install/Uninstall modules in PrestaShop](http://prestaddon.com/tutorials/23-how-to-installuninstall-modules-in-prestashop.html)
 * Dont forget to delete `class_index.php` file in `You-Project/cache`
 
-## Commands
-|  Command  |       Arguments      |         Description         |                Usage               |
-|:---------:|:--------------------:|:---------------------------:|:----------------------------------:|
-|   cache   |                      |         remove cache        |           ./console cache          |
-|   domain  |      domainname      |      change site domain     |     ./console domain someDomain    |
-|  addhook  |       hookname       |       add hook to site      |     ./console addhook myNewHook    |
-|  linkhook | modulename, hookname |    link module with hook    | ./console linkhook someModule hook |
-| migration |        action        | generate/migrate migrations |    ./console migration generate    |
-
-## Migrations
-* To generate migration go to module settings from your back-office and press "Generate migration"
-* To execute migration go to module settings from your back-office and press "Migrate"
-
 ## Rollbar
 Plugin provides errors and exceptions detecting in your application and reports them to Rollbar for alerts, reporting, and analysis.
 
@@ -41,6 +28,19 @@ To use that you should:
 * Enable Rollbar service
 * Fill access token field
 * Press submit to connect log reports with Rollbar
+
+## Migrations
+* To generate migration go to module settings from your back-office and press "Generate migration"
+* To execute migration go to module settings from your back-office and press "Migrate"
+
+## CLI
+|  Command  |       Arguments      |         Description         |                Usage               |
+|:---------:|:--------------------:|:---------------------------:|:----------------------------------:|
+|   cache   |                      |         remove cache        |           ./console cache          |
+|   domain  |      domainname      |      change site domain     |     ./console domain someDomain    |
+|  addhook  |       hookname       |       add hook to site      |     ./console addhook myNewHook    |
+|  linkhook | modulename, hookname |    link module with hook    | ./console linkhook someModule hook |
+| migration |        action        | generate/migrate migrations |    ./console migration generate    |
 
 ## License
 Code released under [the MIT license](https://github.com/LogansUA/ps_admin-tools/blob/master/LICENSE).
