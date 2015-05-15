@@ -96,8 +96,6 @@ class AdminTools extends Module
                 Configuration::updateValue('PS_ROLLBAR_ACCESS_TOKEN', Tools::getValue('access_token'));
                 Configuration::updateValue('PS_ROLLBAR_ENABLER_VALUE', Tools::getValue('rollbar_enabler'));
             }
-
-
         }
 
         if (Tools::isSubmit('generate')) {
