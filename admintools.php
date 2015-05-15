@@ -40,7 +40,8 @@ class AdminTools extends Module
      */
     public function install()
     {
-        if (!parent::install()
+        if (
+            !parent::install()
             || !$this->registerHook('generateMigrations')
             || !$this->registerHook('executeMigrations')
             || !$this->databaseUpdate('install')
@@ -90,6 +91,15 @@ class AdminTools extends Module
      */
     public function getContent()
     {
+        if (Tools::isSubmit('rollbar_submit')) {
+            if (Tools::getValue('access_token')) {
+                Configuration::updateValue('PS_ROLLBAR_ACCESS_TOKEN', Tools::getValue('access_token'));
+                Configuration::updateValue('PS_ROLLBAR_ENABLER_VALUE', Tools::getValue('rollbar_enabler'));
+            }
+
+
+        }
+
         if (Tools::isSubmit('generate')) {
             Hook::exec('generateMigrations');
         }
@@ -108,8 +118,59 @@ class AdminTools extends Module
      */
     private function renderForm()
     {
+        $html = $this->rollbarForm() . $this->migrationsForm();
+
+        return $html;
+    }
+
+    private function rollbarForm()
+    {
+        $fieldsForm = array(
+            'general' => array(
+                'title'  => $this->l('Rollbar'),
+                'fields' => array(
+                    'rollbar_enabler' => array(
+                        'title' => $this->l('Choose one'),
+                        'desc'  => $this->l('Choose between Yes and No.'),
+                        'cast'  => 'boolval',
+                        'type'  => 'bool'
+                    ),
+                    'access_token'    => array(
+                        'title'        => $this->l('Access Token'),
+                        'cast'         => 'strval',
+                        'type'         => 'text',
+                        'defaultValue' => Configuration::get('PS_ROLLBAR_ACCESS_TOKEN')
+                    ),
+
+                ),
+                'submit' => array(
+                    'title' => 'Submit',
+                    'class' => 'button',
+                    'name'  => 'rollbar_submit'
+                ),
+            )
+        );
+
+        $helperOptions = new HelperOptions($this);
+
+        $helperOptions->id              = $this->id;
+        $helperOptions->module          = $this;
+        $helperOptions->name_controller = $this->name;
+        $helperOptions->token           = Tools::getAdminTokenLite('AdminModules');
+        $helperOptions->currentIndex    = AdminController::$currentIndex . '&configure=' . $this->name;
+
+        $helperOptions->required = true;
+
+        return $helperOptions->generateOptions($fieldsForm);
+    }
+
+    private function migrationsForm()
+    {
         $fieldsForm = array(
             'form' => array(
+                'legend'  => array(
+                    'title' => 'Migrations service'
+                ),
                 'buttons' => array(
                     'generate' => array(
                         'title' => $this->l('Generate migration'),
@@ -129,21 +190,22 @@ class AdminTools extends Module
             ),
         );
 
-        $lang   = new Language((int) Configuration::get('PS_LANG_DEFAULT'));
-        $helper = new HelperForm();
+        $helperForm = new HelperForm();
 
-        $helper->show_toolbar = false;
-        $helper->table        = $this->table;
+        $lang = new Language((int) Configuration::get('PS_LANG_DEFAULT'));
 
-        $helper->default_form_language    = $lang->id;
-        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG')
+        $helperForm->show_toolbar = false;
+        $helperForm->table        = $this->table;
+
+        $helperForm->default_form_language    = $lang->id;
+        $helperForm->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG')
             ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG')
             : 0;
 
-        $helper->identifier    = $this->identifier;
-        $helper->submit_action = 'submitModule';
+        $helperForm->identifier    = $this->identifier;
+        $helperForm->submit_action = 'submitModule';
 
-        $helper->currentIndex = $this
+        $helperForm->currentIndex = $this
             ->context
             ->link
             ->getAdminLink('AdminModules', false) .
@@ -151,11 +213,11 @@ class AdminTools extends Module
                 '&tab_module=' . $this->tab .
                 '&module_name=' . $this->name;
 
-        $helper->token = Tools::getAdminTokenLite('AdminModules');
+        $helperForm->token = Tools::getAdminTokenLite('AdminModules');
 
-        return $helper->generateForm(array(
-            $fieldsForm
-        ));
+        $helperForm->fields_value['access_token'] = Configuration::get('PS_ROLLBAR_ACCESS_TOKEN');
+
+        return $helperForm->generateForm(array($fieldsForm));
     }
 
     /**
@@ -225,7 +287,7 @@ class AdminTools extends Module
             $filename = $prefix . $version['basename'];
 
             $stream = fopen($filename, 'r');
-            $data = file_get_contents($filename);
+            $data   = file_get_contents($filename);
 
             try {
                 Db::getInstance()->execute($data);
