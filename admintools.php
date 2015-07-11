@@ -322,7 +322,7 @@ class AdminTools extends Module
     private function generateMigration()
     {
         $dateTime  = new DateTime();
-        $timestamp = $dateTime->format('dmYHis');
+        $timestamp = $dateTime->format('YmdHis');
 
         $filename = dirname(__FILE__) . '/versions/' . $timestamp . '.sql';
         $stream   = fopen($filename, 'w');
