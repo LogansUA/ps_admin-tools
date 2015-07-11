@@ -66,71 +66,23 @@ class CrudController extends AdminController
 
         switch ($command) {
             case 'hook':
-                switch ($this->firstAttribute) {
-                    case 'add':
-                        $this->createNewHook($this->secondAttribute);
-                        break;
-                    case 'exec':
-                        Hook::exec($this->secondAttribute);
-                        break;
-                    case 'link':
-                        $this->linkHook($this->secondAttribute, $this->thirdAttribute);
-                        break;
-                }
+                $this->hookAction();
                 break;
             case 'cache':
-                $endResult = $this->deleteCache('cache/');
+                $this->deleteCache('cache/');
 
-                if ($endResult) {
-                    echo "Delete was success! All cache was clean." . PHP_EOL;
-                } else {
-                    echo "Something go wrong, maybe you don`t have access for cache folder." . PHP_EOL;
-                }
-
+                echo "Delete was success! All cache was clean." . PHP_EOL;
                 break;
             case 'domain':
                 $this->changeDomain($this->firstAttribute);
                 break;
             case 'migration':
-                switch ($this->firstAttribute) {
-                    case 'create':
-                        Hook::exec('generateMigrations');
-
-                        echo "New migration generated." . PHP_EOL;
-                        break;
-                    case 'run':
-                        Hook::exec('executeMigrations');
-
-                        echo "All migrations are executed." . PHP_EOL;
-                        break;
-                    default:
-                        echo "Unused migrations: " . PHP_EOL;
-
-                        Hook::exec('showUnusedMigrations');
-                        break;
-                }
+                $this->migtaionAction();
                 break;
             default:
                 $this->showInfo();
                 break;
         }
-    }
-
-    /**
-     * Show information
-     */
-    private function showInfo()
-    {
-        echo "|--------------------------- Commands -----------------------------|"  . PHP_EOL;
-        echo "cache                                 - remove cache"  . PHP_EOL;
-        echo "domain [domainname]                   - change site domain"  . PHP_EOL;
-        echo "hook [add/link/exec]                  - add/link/exec hook"  . PHP_EOL;
-        echo "     add  [hook name]                 - add new hook"  . PHP_EOL;
-        echo "     link [module name] [hook name]   - link module with hook"  . PHP_EOL;
-        echo "     exec [hook name]                 - execute specific hook"  . PHP_EOL;
-        echo "migration [create/run]                - create/run migrations"  . PHP_EOL;
-        echo "     create                           - create migration version"  . PHP_EOL;
-        echo "     run                              - run new migrations"  . PHP_EOL;
     }
 
     /**
@@ -168,13 +120,95 @@ class CrudController extends AdminController
      */
     private function deleteCache($path)
     {
-        foreach (glob("{$path}/*") as $file) {
-            if (is_dir($file)) {
-                $this->deleteCache($file);
-            } else {
-                unlink($file);
+        try {
+            foreach (glob("{$path}/*") as $file) {
+                if (is_dir($file)) {
+                    $this->deleteCache($file);
+                } else {
+                    unlink($file);
+                }
             }
+        } catch (Exception $exception) {
+            echo $exception->getMessage() . PHP_EOL;
         }
+    }
+
+    /**
+     * Migration action
+     *
+     * @param string $action Action
+     */
+    private function migtaionAction($action = '')
+    {
+        $action = $action ? $action : $this->firstAttribute;
+
+        switch ($action) {
+            case 'create':
+                Hook::exec('generateMigrations');
+
+                echo "New migration generated." . PHP_EOL;
+                break;
+            case 'run':
+                Hook::exec('executeMigrations');
+
+                echo "All migrations are executed." . PHP_EOL;
+                break;
+            default:
+                echo "Unused migrations: " . PHP_EOL;
+
+                Hook::exec('showUnusedMigrations');
+                break;
+        }
+    }
+
+    /**
+     * Hook action
+     *
+     * @param string $action Action
+     */
+    private function hookAction($action = '')
+    {
+        $action = $action ? $action : $this->firstAttribute;
+
+        switch ($action) {
+            case 'add':
+                $this->createNewHook($this->secondAttribute);
+                break;
+            case 'exec':
+                Hook::exec($this->secondAttribute);
+                break;
+            case 'link':
+                $this->linkHook($this->secondAttribute, $this->thirdAttribute);
+                break;
+        }
+    }
+
+    /**
+     * Link hook with module
+     *
+     * @param string $moduleName
+     * @param string $hookName
+     *
+     * @return int
+     */
+    private function linkHook($moduleName, $hookName)
+    {
+        if (!$moduleName || !$hookName) {
+            return 'Parameters mismatch';
+        }
+
+        $sql = "INSERT IGNORE INTO " . _DB_PREFIX_ . "hook_module
+                SELECT
+                 _m.id_module,
+                 _s.id_shop,
+                 _h.id_hook,
+                 0
+                FROM " . _DB_PREFIX_ . "shop AS _s
+                INNER JOIN " . _DB_PREFIX_ . "hook AS _h
+                 ON _h.name = '" . pSQL($hookName) . "'
+                INNER JOIN " . _DB_PREFIX_ . "module AS _m
+                 ON _m.name = '" . pSQL($moduleName) . "'";
+        Db::getInstance()->execute($sql);
 
         return true;
     }
@@ -229,32 +263,19 @@ class CrudController extends AdminController
     }
 
     /**
-     * Link hook with module
-     *
-     * @param string $moduleName
-     * @param string $hookName
-     *
-     * @return int
+     * Show information
      */
-    private function linkHook($moduleName, $hookName)
+    private function showInfo()
     {
-        if (!$moduleName || !$hookName) {
-            return 'Parameters mismatch';
-        }
-
-        $sql = "INSERT IGNORE INTO " . _DB_PREFIX_ . "hook_module
-                SELECT
-                 _m.id_module,
-                 _s.id_shop,
-                 _h.id_hook,
-                 0
-                FROM " . _DB_PREFIX_ . "shop AS _s
-                INNER JOIN " . _DB_PREFIX_ . "hook AS _h
-                 ON _h.name = '" . pSQL($hookName) . "'
-                INNER JOIN " . _DB_PREFIX_ . "module AS _m
-                 ON _m.name = '" . pSQL($moduleName) . "'";
-        Db::getInstance()->execute($sql);
-
-        return true;
+        echo "|--------------------------- Commands -----------------------------|"  . PHP_EOL;
+        echo "cache                                 - remove cache"  . PHP_EOL;
+        echo "domain [domainname]                   - change site domain"  . PHP_EOL;
+        echo "hook [add/link/exec]                  - add/link/exec hook"  . PHP_EOL;
+        echo "     add  [hook name]                 - add new hook"  . PHP_EOL;
+        echo "     link [module name] [hook name]   - link module with hook"  . PHP_EOL;
+        echo "     exec [hook name]                 - execute specific hook"  . PHP_EOL;
+        echo "migration [create/run]                - create/run migrations"  . PHP_EOL;
+        echo "     create                           - create migration version"  . PHP_EOL;
+        echo "     run                              - run new migrations"  . PHP_EOL;
     }
 }
