@@ -23,7 +23,7 @@ class AdminTools extends Module
     public function __construct()
     {
         $this->name      = 'admintools';
-        $this->version   = '1.0';
+        $this->version   = '1.1';
         $this->author    = 'Oleg Kachinsky';
         $this->bootstrap = true;
 
@@ -44,9 +44,10 @@ class AdminTools extends Module
             !parent::install()
             || !$this->registerHook('generateMigrations')
             || !$this->registerHook('executeMigrations')
+            || !$this->registerHook('showUnusedMigrations')
+            || !$this->createTab()
             || !$this->databaseUpdate('install')
-            || !copy(__DIR__ . '/controllers/admin/CrudController.php', _PS_OVERRIDE_DIR_ . '/controllers/admin/CrudController.php')
-            || !symlink(__DIR__ . '/console.php', _PS_ROOT_DIR_ . '/console')
+            || !@symlink(__DIR__ . '/console.php', _PS_ROOT_DIR_ . '/console')
         ) {
             return false;
         }
@@ -61,8 +62,52 @@ class AdminTools extends Module
      */
     public function uninstall()
     {
-        if (!parent::uninstall() || !$this->databaseUpdate('uninstall')) {
+        if (
+            !parent::uninstall()
+            || !$this->registerHook('generateMigrations')
+            || !$this->registerHook('executeMigrations')
+            || !$this->registerHook('showUnusedMigrations')
+            || !$this->removeTab()
+            || !$this->databaseUpdate('uninstall')
+        ) {
             return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Create tab
+     *
+     * @return bool
+     */
+    public function createTab()
+    {
+        $tab = new Tab();
+
+        $tab->active = 1;
+        $languages   = Language::getLanguages(false);
+        if (is_array($languages)) {
+            foreach ($languages as $language) {
+                $tab->name[$language['id_lang']] = 'admintools';
+            }
+        }
+        $tab->class_name = 'Crud';
+        $tab->module     = $this->name;
+        $tab->id_parent  = -1;
+
+        return (bool) $tab->add();
+    }
+
+    /**
+     * @return bool
+     */
+    private function removeTab()
+    {
+        $tabId = (int) Tab::getIdFromClassName('Crud');
+        if ($tabId) {
+            $tab = new Tab($tabId);
+            $tab->delete();
         }
 
         return true;
@@ -82,6 +127,22 @@ class AdminTools extends Module
     public function hookExecuteMigrations()
     {
         $this->executeMigrations();
+    }
+
+    /**
+     * Show unused migrations
+     */
+    public function hookShowUnusedMigrations()
+    {
+        $prefix = dirname(__FILE__) . '/versions/';
+
+        $files = scandir($prefix, 1);
+
+        $unusedVersions = $this->findUnusedVersions($prefix, $files);
+
+        foreach ($unusedVersions as $version) {
+            echo $version['basename'] . PHP_EOL;
+        }
     }
 
     /**
@@ -121,6 +182,9 @@ class AdminTools extends Module
         return $html;
     }
 
+    /**
+     * @return mixed
+     */
     private function rollbarForm()
     {
         $fieldsForm = array(
@@ -162,6 +226,9 @@ class AdminTools extends Module
         return $helperOptions->generateOptions($fieldsForm);
     }
 
+    /**
+     * @return mixed
+     */
     private function migrationsForm()
     {
         $fieldsForm = array(
@@ -203,13 +270,8 @@ class AdminTools extends Module
         $helperForm->identifier    = $this->identifier;
         $helperForm->submit_action = 'submitModule';
 
-        $helperForm->currentIndex = $this
-            ->context
-            ->link
-            ->getAdminLink('AdminModules', false) .
-                '&configure=' . $this->name .
-                '&tab_module=' . $this->tab .
-                '&module_name=' . $this->name;
+        $helperForm->currentIndex = $this->context->link->getAdminLink('AdminModules', false) .
+            '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
 
         $helperForm->token = Tools::getAdminTokenLite('AdminModules');
 
@@ -221,7 +283,7 @@ class AdminTools extends Module
     /**
      * Update database
      *
-     * @param string $action
+     * @param string $action Action
      *
      * @return bool
      */
@@ -285,14 +347,16 @@ class AdminTools extends Module
             $filename = $prefix . $version['basename'];
 
             $stream = fopen($filename, 'r');
-            $data   = file_get_contents($filename);
+            $data   = explode("\n", file_get_contents(str_replace("\r", '', $filename)));
 
-            try {
-                Db::getInstance()->execute($data);
-            } catch (PrestaShopDatabaseException $e) {
-                $this->context->controller->errors[] = $e->getMessage();
+            foreach ($data as $query) {
+                try {
+                    Db::getInstance()->execute($query);
+                } catch (PrestaShopDatabaseException $e) {
+                    $this->context->controller->errors[] = $e->getMessage();
 
-                return false;
+                    return false;
+                }
             }
 
             fclose($stream);
@@ -315,12 +379,12 @@ class AdminTools extends Module
     /**
      * Find unused versions
      *
-     * @param $prefix
-     * @param $files
+     * @param string $prefix Prefix
+     * @param array  $files  Files
      *
      * @return array
      *
-     * @throws PrestaShopDatabaseException
+     * @throws \PrestaShopDatabaseException
      */
     private function findUnusedVersions($prefix, $files)
     {
