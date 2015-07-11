@@ -23,7 +23,7 @@ class AdminTools extends Module
     public function __construct()
     {
         $this->name      = 'admintools';
-        $this->version   = '1.1';
+        $this->version   = '0.2.0';
         $this->author    = 'Oleg Kachinsky';
         $this->bootstrap = true;
 
