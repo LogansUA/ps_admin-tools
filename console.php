@@ -3,6 +3,10 @@
 
 $timer_start = microtime(true);
 
+if (php_sapi_name() !== 'cli') {
+    die;
+}
+
 if (!defined('_PS_ADMIN_DIR_')) {
     define('_PS_ADMIN_DIR_', getcwd());
 }
@@ -25,6 +29,5 @@ if (!isset($_REQUEST['controller']) && isset($_REQUEST['tab'])) {
 }
 
 $_POST['cli_argv'] = $argv;
-
 error_reporting(0);
 Dispatcher::getInstance()->dispatch();
