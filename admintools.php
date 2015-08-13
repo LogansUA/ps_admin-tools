@@ -42,6 +42,9 @@ class AdminTools extends Module
     {
         if (
             !parent::install()
+            || !$this->registerHook('createCommandAdminTools')
+            || !$this->registerHook('deleteCommandAdminTools')
+            || !$this->registerHook('listCommandAdminTools')
             || !$this->registerHook('generateMigrations')
             || !$this->registerHook('executeMigrations')
             || !$this->registerHook('showUnusedMigrations')
@@ -64,11 +67,15 @@ class AdminTools extends Module
     {
         if (
             !parent::uninstall()
-            || !$this->registerHook('generateMigrations')
-            || !$this->registerHook('executeMigrations')
-            || !$this->registerHook('showUnusedMigrations')
+            || !$this->unregisterHook('createCommandAdminTools')
+            || !$this->unregisterHook('deleteCommandAdminTools')
+            || !$this->unregisterHook('listCommandAdminTools')
+            || !$this->unregisterHook('generateMigrations')
+            || !$this->unregisterHook('executeMigrations')
+            || !$this->unregisterHook('showUnusedMigrations')
             || !$this->removeTab()
             || !$this->databaseUpdate('uninstall')
+            || !@unlink(_PS_ROOT_DIR_ . '/console')
         ) {
             return false;
         }
@@ -111,6 +118,81 @@ class AdminTools extends Module
         }
 
         return true;
+    }
+
+    /**
+     * Create command
+     *
+     * @param array $params Params
+     *
+     * @return bool
+     */
+    public function hookCreateCommandAdminTools($params)
+    {
+        if (!$params['command'] && !$params['hook']) {
+            return false;
+        }
+
+        $command = $params['command'];
+        $hook    = $params['hook'];
+
+        $sqlQuery
+            = "INSERT INTO
+                    admintools_command
+                SET
+                    alias_command = '" . pSQL($command) ."',
+                    hook_command = '" . pSQL($hook) . "'";
+
+        Db::getInstance()->execute($sqlQuery);
+        $params['result'] = true;
+
+        return true;
+    }
+
+    /**
+     * Create command
+     *
+     * @param array $params Params
+     *
+     * @return bool
+     */
+    public function hookDeleteCommandAdminTools($params)
+    {
+        if (!isset($params['command'])) {
+            return false;
+        }
+
+        $command = $params['command'];
+
+        $sqlQuery
+            = 'DELETE FROM
+                    admintools_command
+                WHERE
+                    alias_command = ' . pSQL($command);
+
+        Db::getInstance()->execute($sqlQuery);
+        $params['result'] = true;
+
+        return true;
+    }
+
+    /**
+     * List of commands
+     *
+     * @param array $params Params
+     *
+     * @return array
+     */
+    public function hookListCommandAdminTools($params)
+    {
+        $sqlQuery
+            = 'SELECT * FROM admintools_command';
+
+        $result = Db::getInstance()->executeS($sqlQuery);
+
+        if ($result) {
+            $params['result'] = $result;
+        }
     }
 
     /**
@@ -289,28 +371,42 @@ class AdminTools extends Module
      */
     private function databaseUpdate($action = null)
     {
-        $sql = '';
+        $sql = array();
 
         switch ($action) {
             case 'install':
-                $sql
+                $sql[] = 'DROP TABLE IF EXISTS prestashop.migration_versions';
+                $sql[]
                     = 'CREATE TABLE IF NOT EXISTS `migration_versions`
                             (
                                 `version` VARCHAR(255) NOT NULL
                             )
-                        ENGINE = InnoDB DEFAULT CHARSET = utf8;
-                    ';
+                        ENGINE = InnoDB DEFAULT CHARSET = utf8';
+
+                $sql[] = 'DROP TABLE IF EXISTS `admintools_command`';
+                $sql[]
+                    = 'CREATE TABLE `admintools_command` (
+                            `id_command`    INT(10) unsigned NOT NULL AUTO_INCREMENT,
+                            `alias_command` VARCHAR(250) NOT NULL UNIQUE,
+                            `hook_command`  VARCHAR(250) NOT NULL,
+                            `description`   VARCHAR(250) NOT NULL,
+                            PRIMARY KEY (`id_command`)
+                        )
+                            ENGINE = InnoDB
+                            DEFAULT CHARSET = utf8';
                 break;
             case 'uninstall':
-                $sql = 'DROP TABLE IF EXISTS prestashop.migration_versions;';
+                $sql[] = 'DROP TABLE IF EXISTS prestashop.migration_versions';
+                $sql[] = 'DROP TABLE IF EXISTS `admintools_command`';
                 break;
             default:
                 $this->context->controller->errors[] = 'Wrong action in admintools.php: ' . $action;
                 break;
         }
 
-        if (!Db::getInstance()->execute($sql)) {
-            return false;
+        $dbInstance = Db::getInstance();
+        foreach ($sql as $query) {
+            $dbInstance->execute($query);
         }
 
         return true;

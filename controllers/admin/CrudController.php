@@ -8,6 +8,8 @@
  */
 class CrudController extends AdminController
 {
+    const COMMAND_TABLE = 'admintools_command';
+
     /**
      * @var bool $bootstrap
      */
@@ -65,6 +67,9 @@ class CrudController extends AdminController
         $command = $command ? $command : $this->command;
 
         switch ($command) {
+            case 'command':
+                $this->commandAction();
+                break;
             case 'hook':
                 $this->hookAction();
                 break;
@@ -77,10 +82,14 @@ class CrudController extends AdminController
                 $this->changeDomain($this->firstAttribute);
                 break;
             case 'migration':
-                $this->migtaionAction();
+                $this->migraionAction();
                 break;
             default:
-                $this->showInfo();
+                if ($this->checkCommand($command)) {
+                    $this->runCommand();
+                } else {
+                    $this->showInfo();
+                }
                 break;
         }
     }
@@ -112,6 +121,67 @@ class CrudController extends AdminController
     }
 
     /**
+     * Command action
+     *
+     * @param string $action Action
+     */
+    private function commandAction($action = '')
+    {
+        $action = $action ? $action : $this->firstAttribute;
+        $result = false;
+
+        switch ($action) {
+            case 'create':
+                Hook::exec('createCommandAdminTools', array(
+                    'command' => $this->secondAttribute,
+                    'hook'    => $this->thirdAttribute,
+                    'result'  => &$result,
+                ));
+
+                if ($result) {
+                    echo "Command $this->secondAttribute created and linked with hook $this->thirdAttribute." . PHP_EOL;
+                } else {
+                    echo "ERROR: Something wrong!" . PHP_EOL;
+                }
+                break;
+            case 'delete':
+                Hook::exec('deleteCommandAdminTools', array(
+                    'command' => $this->secondAttribute,
+                    'result'  => &$result,
+                ));
+
+                if ($result) {
+                    echo "Command $this->secondAttribute successfully deleted!" . PHP_EOL;
+                } else {
+                    echo "ERROR: Something wrond!" . PHP_EOL;
+                }
+                break;
+            default:
+                $this->listCommand();
+                break;
+        }
+    }
+
+    /**
+     * List command
+     */
+    private function listCommand()
+    {
+        echo "List of commands: " . PHP_EOL;
+
+        $result = array();
+        Module::hookExec('listCommandAdminTools', array(
+            'result' => &$result,
+        ));
+
+        foreach ($result as $row) {
+            echo $row['alias_command'] . "\t\t\t" . $row['description'] . PHP_EOL;
+        }
+
+        return $result;
+    }
+
+    /**
      * Delete cache
      *
      * @param string $path
@@ -138,7 +208,7 @@ class CrudController extends AdminController
      *
      * @param string $action Action
      */
-    private function migtaionAction($action = '')
+    private function migraionAction($action = '')
     {
         $action = $action ? $action : $this->firstAttribute;
 
@@ -263,19 +333,52 @@ class CrudController extends AdminController
     }
 
     /**
+     * Check command for existing
+     *
+     * @param string $command Command
+     *
+     * @return bool
+     * @throws \PrestaShopDatabaseException
+     */
+    private function checkCommand($command)
+    {
+        $sql = 'SELECT * FROM ' . self::COMMAND_TABLE . ' WHERE alias_command = "' . pSQL($command) . '"';
+
+        $result = Db::getInstance()->executeS($sql);
+
+        $lastCommand           = end($result);
+        $this->firstAttribute  = $lastCommand['alias_command'];
+        $this->secondAttribute = $lastCommand['hook_command'];
+
+        if ($result) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Run command
+     */
+    private function runCommand()
+    {
+        Hook::exec($this->secondAttribute);
+    }
+
+    /**
      * Show information
      */
     private function showInfo()
     {
-        echo "|--------------------------- Commands -----------------------------|"  . PHP_EOL;
-        echo "cache                                 - remove cache"  . PHP_EOL;
-        echo "domain [domainname]                   - change site domain"  . PHP_EOL;
-        echo "hook [add/link/exec]                  - add/link/exec hook"  . PHP_EOL;
-        echo "     add  [hook name]                 - add new hook"  . PHP_EOL;
-        echo "     link [module name] [hook name]   - link module with hook"  . PHP_EOL;
-        echo "     exec [hook name]                 - execute specific hook"  . PHP_EOL;
-        echo "migration [create/run]                - create/run migrations"  . PHP_EOL;
-        echo "     create                           - create migration version"  . PHP_EOL;
-        echo "     run                              - run new migrations"  . PHP_EOL;
+        echo "|--------------------------- Commands -----------------------------|" . PHP_EOL;
+        echo "cache                                 - remove cache" . PHP_EOL;
+        echo "domain [domainname]                   - change site domain" . PHP_EOL;
+        echo "hook [add/link/exec]                  - add/link/exec hook" . PHP_EOL;
+        echo "     add  [hook name]                 - add new hook" . PHP_EOL;
+        echo "     link [module name] [hook name]   - link module with hook" . PHP_EOL;
+        echo "     exec [hook name]                 - execute specific hook" . PHP_EOL;
+        echo "migration [create/run]                - create/run migrations" . PHP_EOL;
+        echo "     create                           - create migration version" . PHP_EOL;
+        echo "     run                              - run new migrations" . PHP_EOL;
     }
 }
